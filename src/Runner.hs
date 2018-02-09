@@ -59,11 +59,11 @@ instance Semigroup Summary where
     (Summary x1 x2 x3 x4) (Summary y1 y2 y3 y4) = Summary (x1 + y1) (x2 + y2) (x3 + y3) (x4 + y4)
 
 -- | Run all examples from a list of modules.
-runModules :: Bool -> Bool -> Interpreter -> [Module [Located DocTest]] -> IO Summary
-runModules fastMode preserveIt repl modules = do
+runModules :: Bool -> Bool -> Bool -> Interpreter -> [Module [Located DocTest]] -> IO Summary
+runModules fastMode preserveIt verbose repl modules = do
   isInteractive <- hIsTerminalDevice stderr
   ReportState _ _ s <- (`execStateT` ReportState 0 isInteractive mempty {sExamples = c}) $ do
-    forM_ modules $ runModule fastMode preserveIt repl
+    forM_ modules $ runModule fastMode preserveIt verbose repl
 
     -- report final summary
     gets (show . reportStateSummary) >>= report
@@ -114,20 +114,20 @@ overwrite msg = do
   liftIO (hPutStr stderr str)
 
 -- | Run all examples from given module.
-runModule :: Bool -> Bool -> Interpreter -> Module [Located DocTest] -> Report ()
-runModule fastMode preserveIt repl (Module module_ setup examples) = do
+runModule :: Bool -> Bool -> Bool -> Interpreter -> Module [Located DocTest] -> Report ()
+runModule fastMode preserveIt verbose repl (Module module_ setup examples) = do
 
   Summary _ _ e0 f0 <- gets reportStateSummary
 
   forM_ setup $
-    runTestGroup preserveIt repl reload
+    runTestGroup preserveIt verbose repl reload
 
   Summary _ _ e1 f1 <- gets reportStateSummary
 
   -- only run tests, if setup does not produce any errors/failures
   when (e0 == e1 && f0 == f1) $
     forM_ examples $
-      runTestGroup preserveIt repl setup_
+      runTestGroup preserveIt verbose repl setup_
   where
     reload :: IO ()
     reload = do
@@ -175,14 +175,14 @@ updateSummary summary = do
 --
 -- The interpreter state is zeroed with @:reload@ first.  This means that you
 -- can reuse the same 'Interpreter' for several test groups.
-runTestGroup :: Bool -> Interpreter -> IO () -> [Located DocTest] -> Report ()
-runTestGroup preserveIt repl setup tests = do
+runTestGroup :: Bool -> Bool -> Interpreter -> IO () -> [Located DocTest] -> Report ()
+runTestGroup preserveIt verbose repl setup tests = do
 
   -- report intermediate summary
   gets (show . reportStateSummary) >>= report_
 
   liftIO setup
-  runExampleGroup preserveIt repl examples
+  runExampleGroup preserveIt verbose repl examples
 
   forM_ properties $ \(loc, expression) -> do
     r <- liftIO $ do
@@ -205,8 +205,8 @@ runTestGroup preserveIt repl setup tests = do
 -- |
 -- Execute all expressions from given example in given 'Interpreter' and verify
 -- the output.
-runExampleGroup :: Bool -> Interpreter -> [Located Interaction] -> Report ()
-runExampleGroup preserveIt repl = go
+runExampleGroup :: Bool -> Bool -> Interpreter -> [Located Interaction] -> Report ()
+runExampleGroup preserveIt verbose repl = go
   where
     go ((Located loc (expression, expected)) : xs) = do
       r <- fmap lines <$> liftIO (safeEvalWith preserveIt repl expression)
