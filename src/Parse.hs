@@ -86,7 +86,7 @@ parseProperties (Located loc input) = go $ zipWith Located (enumerate loc) (line
       prop:rest -> stripPrompt `fmap` prop : go rest
       [] -> []
 
-    stripPrompt = strip . dropWhile (not . isSpace) . drop 3 . dropWhile isSpace
+    stripPrompt = strip . drop 5 . dropWhile isSpace
 
 -- | Extract all interactions from given Haddock comment.
 parseInteractions :: Located String -> [Located Interaction]
@@ -106,7 +106,7 @@ parseInteractions (Located loc input) = go $ zipWith Located (enumerate loc) (li
     go :: [Located String] -> [Located Interaction]
     go xs = case dropWhile (not . isPrompt) xs of
       prompt:rest
-       | ":{" : _ <- words (drop 3 (dropWhile isSpace (unLoc prompt))),
+       | ":{" : _ <- words . snd . splitPrompt . dropWhile isSpace . unLoc $ prompt,
          (ys,zs) <- break isBlankLine rest ->
           toInteraction prompt ys : go zs
 
@@ -116,6 +116,14 @@ parseInteractions (Located loc input) = go $ zipWith Located (enumerate loc) (li
         in
           toInteraction prompt ys : go zs
       [] -> []
+
+splitPrompt :: String -> (String, String)
+splitPrompt e = case leadingNonBlank of
+    "" -> ("", e)
+    "λ" -> splitAt 1 e
+    ">>>" -> splitAt 3 e
+    ":}" -> splitAt 2 e
+  where leadingNonBlank = takeWhile (not . isSpace) e
 
 -- | Create an `Interaction`, strip superfluous whitespace as appropriate.
 --
@@ -131,9 +139,7 @@ toInteraction (Located loc x) xs = Located loc $
   where
     -- 1. drop trailing whitespace from the prompt, remember the prefix
     (prefix, e) = span isSpace x
-    (ePrompt, eRest) = case elemIndex ' ' e of
-        Nothing -> splitAt 3 e
-        Just i  -> splitAt i e
+    (ePrompt, eRest) = splitPrompt e
 
     -- 2. drop, if possible, the exact same sequence of whitespace
     -- characters from each result line
