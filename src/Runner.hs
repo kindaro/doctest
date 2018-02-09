@@ -66,6 +66,7 @@ runModules fastMode preserveIt verbose repl modules = do
     forM_ modules $ runModule fastMode preserveIt verbose repl
 
     -- report final summary
+    when verbose $ report $ "# Final summary:"
     gets (show . reportStateSummary) >>= report
 
   return s
@@ -179,7 +180,7 @@ runTestGroup :: Bool -> Bool -> Interpreter -> IO () -> [Located DocTest] -> Rep
 runTestGroup preserveIt verbose repl setup tests = do
 
   -- report intermediate summary
-  gets (show . reportStateSummary) >>= report_
+  when (not verbose) $ gets (show . reportStateSummary) >>= report_
 
   liftIO setup
   runExampleGroup preserveIt verbose repl examples
@@ -209,6 +210,9 @@ runExampleGroup :: Bool -> Bool -> Interpreter -> [Located Interaction] -> Repor
 runExampleGroup preserveIt verbose repl = go
   where
     go ((Located loc (expression, expected)) : xs) = do
+      when verbose $ do
+        report $ "### Running example at " ++ show loc
+        report expression
       r <- fmap lines <$> liftIO (safeEvalWith preserveIt repl expression)
       case r of
         Left err -> do
@@ -218,6 +222,7 @@ runExampleGroup preserveIt verbose repl = go
             reportFailure loc expression
             mapM_ report err
           Equal -> do
+            when verbose $ report "### Successful!\n"
             reportSuccess
             go xs
     go [] = return ()
