@@ -1,3 +1,6 @@
+Changes in 0.14.0
+  - GHC 8.4 compatibility.
+
 Changes in 0.13.0
   - Add `--preserve-it` for allowing the `it` variable to be preserved between examples
 
