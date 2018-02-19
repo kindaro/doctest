@@ -80,13 +80,21 @@ parseProperties :: Located String -> [Located Expression]
 parseProperties (Located loc input) = go $ zipWith Located (enumerate loc) (lines input)
   where
     isPrompt :: Located String -> Bool
-    isPrompt = isPrefixOf "prop>" . dropWhile isSpace . unLoc
+    isPrompt = isJust . splitPrompt . dropWhile isSpace . unLoc
 
     go xs = case dropWhile (not . isPrompt) xs of
       prop:rest -> stripPrompt `fmap` prop : go rest
       [] -> []
 
-    stripPrompt = strip . drop 5 . dropWhile isSpace
+    stripPrompt s = strip . dropWhile isSpace $ case splitPrompt s of
+        Just (_, t) -> t
+        Nothing     -> s
+
+    splitPrompt :: String -> Maybe (String, String)
+    splitPrompt = splitPrompt' . strip
+    splitPrompt' s | isPrefixOf "prop>" s = Just (take 5 s, drop 5 s)
+                   | isPrefixOf "α" s = Just (take 1 s, drop 1 s)
+                   | otherwise = Nothing
 
 -- | Extract all interactions from given Haddock comment.
 parseInteractions :: Located String -> [Located Interaction]
