@@ -9,7 +9,6 @@ module Report (
 
 #if __GLASGOW_HASKELL__ < 710
 import           Data.Monoid hiding ((<>))
-import           Control.Applicative
 #endif
 
 import           Control.Monad hiding (forM_)
