@@ -14,8 +14,7 @@ import           Control.Applicative
 
 import           Control.Monad hiding (forM_)
 import           Text.Printf (printf)
-import           System.IO (hPutStrLn, hPutStr, stderr, hIsTerminalDevice)
-import           Data.Foldable (forM_)
+import           System.IO (hPutStrLn, hPutStr, stderr)
 
 import           Control.Monad.Trans.State
 import           Control.Monad.IO.Class
