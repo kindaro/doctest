@@ -27,7 +27,11 @@ import           Property
 import           Runner.Example
 import           Report
 
-data TestType = Specification | QuickCheckProperty deriving (Show, Eq)
+data TestType = Specification | QuickCheckProperty
+
+instance Show TestType where
+    show Specification = "HSpec specification"
+    show QuickCheckProperty = "QuickCheck property"
 
 -- | Run all examples from a list of modules.
 runModules :: Bool -> Bool -> Bool -> Interpreter -> [Module [Located DocTest]] -> IO Summary
@@ -89,7 +93,8 @@ runModule fastMode preserveIt verbose repl (Module module_ setup examples) = do
 reportStart :: Location -> Expression -> Bool -> TestType -> Report ()
 reportStart loc expression verbose testType = when verbose $ do
   when verbose $
-    report (printf "### Started execution at %s.\n    %s:\n%s" (show loc) (show testType) expression)
+    report (printf "### Started execution at %s.\n### %s:\n%s"
+        (show loc) (show testType) expression)
 
 reportFailure :: Location -> Expression -> Bool -> Report ()
 reportFailure loc expression verbose = do
@@ -104,8 +109,11 @@ reportError loc expression err verbose = do
 
 reportSuccess :: Bool -> Report ()
 reportSuccess verbose = do
-  when verbose $ report "### Successful!\n"
+  when verbose $ report "### Successful!"
   updateSummary (Summary 0 1 0 0)
+
+reportSeparator :: Bool -> Report ()
+reportSeparator verbose = when verbose $ report ""
 
 updateSummary :: Summary -> Report ()
 updateSummary summary = do
@@ -131,13 +139,16 @@ runTestGroup preserveIt verbose repl setup tests = do
       reportStart loc expression verbose QuickCheckProperty
       runProperty repl expression
     case r of
-      Success ->
+      Success -> do
         reportSuccess verbose
+        reportSeparator verbose
       Error err -> do
         reportError loc expression err verbose
+        reportSeparator verbose
       Failure msg -> do
         reportFailure loc expression verbose
         report msg
+        reportSeparator verbose
   where
     properties = [(loc, p) | Located loc (Property p) <- tests]
 
@@ -156,12 +167,15 @@ runExampleGroup preserveIt verbose repl = go
       case r of
         Left err -> do
           reportError loc expression err verbose
+          reportSeparator verbose
         Right actual -> case mkResult expected actual of
           NotEqual err -> do
             reportFailure loc expression verbose
             mapM_ report err
+            reportSeparator verbose
           Equal -> do
             reportSuccess verbose
+            reportSeparator verbose
             go xs
     go [] = return ()
 

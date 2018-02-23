@@ -101,7 +101,7 @@ spec = do
       (r, ()) <- hCapture [stderr] $ doctest ["--verbose", "test/integration/testSimple/Fib.hs"]
       r `shouldBe` unlines [
           "### Started execution at test/integration/testSimple/Fib.hs:5."
-        , "    Specification:"
+        , "### HSpec specification:"
         , "fib 10"
         , "### Successful!"
         , ""
@@ -113,7 +113,7 @@ spec = do
       (r, ()) <- hCapture [stderr] $ doctest ["--verbose", "test/integration/property-bool/Foo.hs"]
       r `shouldBe` unlines [
           "### Started execution at test/integration/property-bool/Foo.hs:4."
-        , "    QuickCheckProperty:"
+        , "### QuickCheck property:"
         , "True"
         , "### Successful!"
         , ""
