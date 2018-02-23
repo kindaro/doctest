@@ -11,6 +11,7 @@ import           System.IO
 import           System.IO.Silently (hCapture)
 import           Control.Monad.Trans.State
 import           Runner
+import           Report
 
 main :: IO ()
 main = hspec spec
