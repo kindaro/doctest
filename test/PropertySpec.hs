@@ -5,6 +5,10 @@ import           Test.Hspec
 import           Data.String.Builder
 import           Control.Monad.Trans.State
 
+#if __GLASGOW_HASKELL__ < 710
+import           Data.Monoid hiding ((<>))
+#endif
+
 import           Property
 import           Interpreter (withInterpreter, Interpreter)
 import           Parse
