@@ -198,8 +198,8 @@ test-suite spec
       PackageDBsSpec
       ParseSpec
       PropertySpec
+      ReportSpec
       Runner.ExampleSpec
-      RunnerSpec
       RunSpec
       SandboxSpec
       UtilSpec
