@@ -1,8 +1,7 @@
--- This file has been generated from package.yaml by hpack version 0.26.0.
+-- This file has been generated from package.yaml by hpack version 0.25.0 and
+-- manually fixed afterwards.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: 0a29aaff0365fc3bd51a91801874db9f7286c473371a385a2d6ec0c8dfb48e6e
 
 name:           doctest
 version:        0.14.1
@@ -122,6 +121,7 @@ library
       PackageDBs
       Parse
       Property
+      Report
       Run
       Runner
       Runner.Example
@@ -211,6 +211,7 @@ test-suite spec
       PackageDBs
       Parse
       Property
+      Report
       Run
       Runner
       Runner.Example

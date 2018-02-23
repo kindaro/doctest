@@ -2,13 +2,6 @@
 module Runner (
   runModules
 , Summary(..)
-
-#ifdef TEST
-, Report
-, ReportState (..)
-, report
-, report_
-#endif
 ) where
 
 import           Prelude hiding (putStr, putStrLn, error)
@@ -32,31 +25,9 @@ import           Parse
 import           Location
 import           Property
 import           Runner.Example
+import           Report
 
--- | Summary of a test run.
-data Summary = Summary {
-  sExamples :: Int
-, sTried    :: Int
-, sErrors   :: Int
-, sFailures :: Int
-} deriving Eq
-
--- | Format a summary.
-instance Show Summary where
-  show (Summary examples tried errors failures) =
-    printf "Examples: %d  Tried: %d  Errors: %d  Failures: %d" examples tried errors failures
-
-
--- | Sum up summaries.
-instance Monoid Summary where
-  mempty = Summary 0 0 0 0
-#if MIN_VERSION_base(4,11,0)
-instance Semigroup Summary where
-  (<>)
-#else
-  mappend
-#endif
-    (Summary x1 x2 x3 x4) (Summary y1 y2 y3 y4) = Summary (x1 + y1) (x2 + y2) (x3 + y3) (x4 + y4)
+data TestType = Specification | QuickCheckProperty deriving (Show, Eq)
 
 -- | Run all examples from a list of modules.
 runModules :: Bool -> Bool -> Bool -> Interpreter -> [Module [Located DocTest]] -> IO Summary
@@ -76,43 +47,6 @@ runModules fastMode preserveIt verbose repl modules = do
 -- | Count number of expressions in given module.
 count :: Module [Located DocTest] -> Int
 count (Module _ setup tests) = sum (map length tests) + maybe 0 length setup
-
--- | A monad for generating test reports.
-type Report = StateT ReportState IO
-
-data ReportState = ReportState {
-  reportStateCount        :: Int     -- ^ characters on the current line
-, reportStateInteractive  :: Bool    -- ^ should intermediate results be printed?
-, reportStateSummary      :: Summary -- ^ test summary
-}
-
--- | Add output to the report.
-report :: String -> Report ()
-report msg = do
-  overwrite msg
-
-  -- add a newline, this makes the output permanent
-  liftIO $ hPutStrLn stderr ""
-  modify (\st -> st {reportStateCount = 0})
-
--- | Add intermediate output to the report.
---
--- This will be overwritten by subsequent calls to `report`/`report_`.
--- Intermediate out may not contain any newlines.
-report_ :: String -> Report ()
-report_ msg = do
-  f <- gets reportStateInteractive
-  when f $ do
-    overwrite msg
-    modify (\st -> st {reportStateCount = length msg})
-
--- | Add output to the report, overwrite any intermediate out.
-overwrite :: String -> Report ()
-overwrite msg = do
-  n <- gets reportStateCount
-  let str | 0 < n     = "\r" ++ msg ++ replicate (n - length msg) ' '
-          | otherwise = msg
-  liftIO (hPutStr stderr str)
 
 -- | Run all examples from given module.
 runModule :: Bool -> Bool -> Bool -> Interpreter -> Module [Located DocTest] -> Report ()
@@ -152,19 +86,25 @@ runModule fastMode preserveIt verbose repl (Module module_ setup examples) = do
         Property _  -> return ()
         Example e _ -> void $ safeEvalWith preserveIt repl e
 
-reportFailure :: Location -> Expression -> Report ()
-reportFailure loc expression = do
+reportStart :: Location -> Expression -> Bool -> TestType -> Report ()
+reportStart loc expression verbose testType = when verbose $ do
+  when verbose $
+    report (printf "### Started execution at %s.\n    %s:\n%s" (show loc) (show testType) expression)
+
+reportFailure :: Location -> Expression -> Bool -> Report ()
+reportFailure loc expression verbose = do
   report (printf "### Failure in %s: expression `%s'" (show loc) expression)
   updateSummary (Summary 0 1 0 1)
 
-reportError :: Location -> Expression -> String -> Report ()
-reportError loc expression err = do
+reportError :: Location -> Expression -> String -> Bool -> Report ()
+reportError loc expression err verbose = do
   report (printf "### Error in %s: expression `%s'" (show loc) expression)
   report err
   updateSummary (Summary 0 1 1 0)
 
-reportSuccess :: Report ()
-reportSuccess =
+reportSuccess :: Bool -> Report ()
+reportSuccess verbose = do
+  when verbose $ report "### Successful!\n"
   updateSummary (Summary 0 1 0 0)
 
 updateSummary :: Summary -> Report ()
@@ -186,16 +126,17 @@ runTestGroup preserveIt verbose repl setup tests = do
   runExampleGroup preserveIt verbose repl examples
 
   forM_ properties $ \(loc, expression) -> do
-    r <- liftIO $ do
-      setup
+    r <- do
+      liftIO setup
+      reportStart loc expression verbose QuickCheckProperty
       runProperty repl expression
     case r of
       Success ->
-        reportSuccess
+        reportSuccess verbose
       Error err -> do
-        reportError loc expression err
+        reportError loc expression err verbose
       Failure msg -> do
-        reportFailure loc expression
+        reportFailure loc expression verbose
         report msg
   where
     properties = [(loc, p) | Located loc (Property p) <- tests]
@@ -210,20 +151,17 @@ runExampleGroup :: Bool -> Bool -> Interpreter -> [Located Interaction] -> Repor
 runExampleGroup preserveIt verbose repl = go
   where
     go ((Located loc (expression, expected)) : xs) = do
-      when verbose $ do
-        report $ "### Running example at " ++ show loc
-        report expression
+      reportStart loc expression verbose Specification
       r <- fmap lines <$> liftIO (safeEvalWith preserveIt repl expression)
       case r of
         Left err -> do
-          reportError loc expression err
+          reportError loc expression err verbose
         Right actual -> case mkResult expected actual of
           NotEqual err -> do
-            reportFailure loc expression
+            reportFailure loc expression verbose
             mapM_ report err
           Equal -> do
-            when verbose $ report "### Successful!\n"
-            reportSuccess
+            reportSuccess verbose
             go xs
     go [] = return ()
 
