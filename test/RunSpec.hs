@@ -121,6 +121,21 @@ spec = do
         , "Examples: 1  Tried: 1  Errors: 0  Failures: 0"
         ]
 
+    it "prints verbose error" $ do
+      (r, e) <- hCapture [stderr] . E.try $ doctest ["--verbose", "test/integration/failing/Foo.hs"]
+      e `shouldBe` Left (ExitFailure 1)
+      r `shouldBe` unlines [
+              "### Started execution at test/integration/failing/Foo.hs:5."
+            , "### HSpec specification:"
+            , "23"
+            , "### Failure in test/integration/failing/Foo.hs:5: expression `23'"
+            , "expected: 42"
+            , " but got: 23"
+            , ""
+            , "# Final summary:"
+            , "Examples: 1  Tried: 1  Errors: 0  Failures: 1"
+        ]
+
   describe "doctestWithOptions" $ do
     context "on parse error" $ do
       let action = withCurrentDirectory "test/integration/parse-error" (doctestWithDefaultOptions ["Foo.hs"])
