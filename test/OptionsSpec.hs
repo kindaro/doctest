@@ -58,3 +58,12 @@ spec = do
     context "with --info" $ do
       it "outputs machine readable version information" $ do
         parseOptions ["--info"] `shouldBe` Output info
+
+    describe "--verbose" $ do
+      context "without --verbose" $ do
+        it "does not preserve the `it` variable" $ do
+          runVerbose <$> parseOptions [] `shouldBe` Result False
+
+      context "with --verbose" $ do
+        it "preserves the `it` variable" $ do
+          runVerbose <$> parseOptions ["--verbose"] `shouldBe` Result True

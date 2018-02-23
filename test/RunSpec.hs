@@ -97,6 +97,30 @@ spec = do
         rmDir "test/integration/custom-package-conf/packages/"
         rmDir "test/integration/custom-package-conf/foo/dist/"
 
+    it "prints verbose description of a specification" $ do
+      (r, ()) <- hCapture [stderr] $ doctest ["--verbose", "test/integration/testSimple/Fib.hs"]
+      r `shouldBe` unlines [
+          "### Started execution at test/integration/testSimple/Fib.hs:5."
+        , "    Specification:"
+        , "fib 10"
+        , "### Successful!"
+        , ""
+        , "# Final summary:"
+        , "Examples: 1  Tried: 1  Errors: 0  Failures: 0"
+        ]
+
+    it "prints verbose description of a property" $ do
+      (r, ()) <- hCapture [stderr] $ doctest ["--verbose", "test/integration/property-bool/Foo.hs"]
+      r `shouldBe` unlines [
+          "### Started execution at test/integration/property-bool/Foo.hs:4."
+        , "    QuickCheckProperty:"
+        , "True"
+        , "### Successful!"
+        , ""
+        , "# Final summary:"
+        , "Examples: 1  Tried: 1  Errors: 0  Failures: 0"
+        ]
+
   describe "doctestWithOptions" $ do
     context "on parse error" $ do
       let action = withCurrentDirectory "test/integration/parse-error" (doctestWithDefaultOptions ["Foo.hs"])
