@@ -13,7 +13,7 @@ import           Control.Applicative
 
 import           Control.Monad hiding (forM_)
 import           Text.Printf (printf)
-import           System.IO (hPutStrLn, hPutStr, stderr, hIsTerminalDevice)
+import           System.IO (stderr, hIsTerminalDevice)
 import           Data.Foldable (forM_)
 
 import           Control.Monad.Trans.State
@@ -97,12 +97,12 @@ reportStart loc expression verbose testType = when verbose $ do
         (show loc) (show testType) expression)
 
 reportFailure :: Location -> Expression -> Bool -> Report ()
-reportFailure loc expression verbose = do
+reportFailure loc expression _ = do
   report (printf "### Failure in %s: expression `%s'" (show loc) expression)
   updateSummary (Summary 0 1 0 1)
 
 reportError :: Location -> Expression -> String -> Bool -> Report ()
-reportError loc expression err verbose = do
+reportError loc expression err _ = do
   report (printf "### Error in %s: expression `%s'" (show loc) expression)
   report err
   updateSummary (Summary 0 1 1 0)
