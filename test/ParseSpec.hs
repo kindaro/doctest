@@ -96,6 +96,12 @@ spec = do
         "23"
       `shouldBe` [("foo", ["23"])]
 
+    it "parses an interaction with λ prompt" $ do
+      parse_ $ do
+        "λ foo"
+        "23"
+      `shouldBe` [("foo", ["23"])]
+
     it "drops whitespace as appropriate" $ do
       parse_ $ do
         "    >>> foo   "

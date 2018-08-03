@@ -86,14 +86,15 @@ parseProperties (Located loc input) = go $ zipWith Located (enumerate loc) (line
       prop:rest -> stripPrompt `fmap` prop : go rest
       [] -> []
 
-    stripPrompt = strip . drop 5 . dropWhile isSpace
+    stripPrompt = strip . dropWhile (not . isSpace) . drop 3 . dropWhile isSpace
 
 -- | Extract all interactions from given Haddock comment.
 parseInteractions :: Located String -> [Located Interaction]
 parseInteractions (Located loc input) = go $ zipWith Located (enumerate loc) (lines input)
   where
     isPrompt :: Located String -> Bool
-    isPrompt = isPrefixOf ">>>" . dropWhile isSpace . unLoc
+    isPrompt s = isPrefixOf ">>>" s' || isPrefixOf "λ" s'
+      where s' = dropWhile isSpace . unLoc $ s
 
     isBlankLine :: Located String -> Bool
     isBlankLine  = null . dropWhile isSpace . unLoc
@@ -130,7 +131,9 @@ toInteraction (Located loc x) xs = Located loc $
   where
     -- 1. drop trailing whitespace from the prompt, remember the prefix
     (prefix, e) = span isSpace x
-    (ePrompt, eRest) = splitAt 3 e
+    (ePrompt, eRest) = case elemIndex ' ' e of
+        Nothing -> splitAt 3 e
+        Just i  -> splitAt i e
 
     -- 2. drop, if possible, the exact same sequence of whitespace
     -- characters from each result line
