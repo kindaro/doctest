@@ -191,6 +191,11 @@ spec = do
         "prop> foo"
       `shouldBe` ["foo"]
 
+    it "parses a property with α prompt" $ do
+      parse_ $ do
+        "α foo"
+      `shouldBe` ["foo"]
+
   describe "mkLineChunks (an internal function)" $ do
 
     it "replaces ellipsis with WildCardChunks" $ do
